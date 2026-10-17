@@ -5,13 +5,13 @@ from graph_db import get_graph
 def get_finding(finding_id: str) -> dict:
     graph = get_graph()
     result = graph.ro_query(
-        "MATCH (f:Finding {id:$id}) RETURN f.id, f.title, f.type, f.severity_level, f.status, f.source",
+        "MATCH (f:Finding {id:$id}) RETURN f.id, f.title, f.type, f.severity_level, f.status, f.source, f.fingerprint",
         params={"id": finding_id},
     ).result_set
     if not result:
         return {"error": "finding_not_found", "finding_id": finding_id}
     row = result[0]
-    return dict(zip(("id", "title", "type", "severity_level", "status", "source"), row))
+    return dict(zip(("id", "title", "type", "severity_level", "status", "source", "fingerprint"), row))
 
 
 def trace_impact(finding_id: str) -> list[dict]:

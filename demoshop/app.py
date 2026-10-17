@@ -8,10 +8,12 @@ on the internet. Only fake accounts and fake order data are used.
 """
 import argparse
 import json
+import os
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import urlparse
 
-HOST, PORT = "127.0.0.1", 8000
+HOST = os.getenv("DEMOSHOP_HOST", "127.0.0.1")
+PORT = int(os.getenv("DEMOSHOP_PORT", "5001"))
 TEST_USERS = {"demo-alice": "alice", "demo-bob": "bob"}
 ORDERS = {
     "101": {"id": "101", "owner": "alice", "item": "Demo keyboard", "total": 49},
@@ -30,6 +32,7 @@ h1{color:#38bdf8}code{color:#a5f3fc}</style></head><body>
 
 class Handler(BaseHTTPRequestHandler):
     secure_mode = False
+    csp_enabled = False
 
     def send_payload(self, status, payload, content_type="application/json"):
         body = (json.dumps(payload) if isinstance(payload, (dict, list)) else payload).encode()
@@ -38,7 +41,8 @@ class Handler(BaseHTTPRequestHandler):
         self.send_header("Content-Length", str(len(body)))
         self.send_header("Cache-Control", "no-store")
         self.send_header("X-Content-Type-Options", "nosniff")
-        # CSP intentionally omitted for the separate CSP scanner demo.
+        if self.secure_mode or self.csp_enabled:
+            self.send_header("Content-Security-Policy", "default-src 'self'")
         self.end_headers()
         self.wfile.write(body)
 
@@ -72,12 +76,16 @@ class Handler(BaseHTTPRequestHandler):
 def main():
     parser = argparse.ArgumentParser(description="Local synthetic security demo")
     parser.add_argument("--secure", action="store_true", help="Enable server-side ownership checks")
+    parser.add_argument("--with-csp", action="store_true", help="Include Content-Security-Policy header")
+    parser.add_argument("--port", type=int, default=PORT, help=f"Port to run on (default {PORT})")
     args = parser.parse_args()
     Handler.secure_mode = args.secure
+    Handler.csp_enabled = args.with_csp
+    port = args.port
     mode = "PATCHED / ownership enforced" if args.secure else "VULNERABLE / BOLA demonstration"
-    print(f"DemoShop at http://{HOST}:{PORT}/ — {mode}", flush=True)
+    print(f"DemoShop at http://{HOST}:{port}/ — {mode}", flush=True)
     print("Local test only. Press Ctrl+C to stop.", flush=True)
-    server = ThreadingHTTPServer((HOST, PORT), Handler)
+    server = ThreadingHTTPServer((HOST, port), Handler)
     try:
         server.serve_forever()
     except KeyboardInterrupt:
