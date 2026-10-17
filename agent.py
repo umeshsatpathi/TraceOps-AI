@@ -55,8 +55,11 @@ def read_finding(finding_id: str) -> str:
     Returns its type, severity, status and other
     available attributes.
     """
-    result = get_finding(finding_id)
-    return json.dumps(result, default=str)
+    try:
+        result = get_finding(finding_id)
+        return json.dumps(result, default=str)
+    except Exception as error:
+        return json.dumps({"error": str(error), "finding_id": finding_id})
 
 
 @tool
@@ -67,8 +70,11 @@ def trace_finding_impact(finding_id: str) -> str:
     Retrieves related endpoints, services,
     databases and sensitive data assets.
     """
-    result = trace_impact(finding_id)
-    return json.dumps(result, default=str)
+    try:
+        result = trace_impact(finding_id)
+        return json.dumps(result, default=str)
+    except Exception as error:
+        return json.dumps({"error": str(error), "finding_id": finding_id})
 
 
 @tool
@@ -79,8 +85,11 @@ def inspect_finding_evidence(finding_id: str) -> str:
     Helps distinguish confirmed vulnerabilities
     from suspected or unverified findings.
     """
-    result = get_evidence(finding_id)
-    return json.dumps(result, default=str)
+    try:
+        result = get_evidence(finding_id)
+        return json.dumps(result, default=str)
+    except Exception as error:
+        return json.dumps({"error": str(error), "finding_id": finding_id})
 
 
 @tool
@@ -91,8 +100,11 @@ def calculate_finding_priority(finding_id: str) -> str:
     Uses connected graph relationships and
     security severity instead of guessing.
     """
-    result = score_priority(finding_id)
-    return json.dumps(result, default=str)
+    try:
+        result = score_priority(finding_id)
+        return json.dumps(result, default=str)
+    except Exception as error:
+        return json.dumps({"error": str(error), "finding_id": finding_id})
 
 
 @tool
@@ -157,10 +169,11 @@ def create_llm():
     api_key = os.getenv("GOOGLE_API_KEY")
 
     if not api_key:
-        raise SystemExit(
-            "\nERROR: GOOGLE_API_KEY not found.\n"
-            "Add GOOGLE_API_KEY=your_api_key to your .env file.\n"
+        raise RuntimeError(
+            "GOOGLE_API_KEY not found. "
+            "Add GOOGLE_API_KEY=your_api_key to your .env file."
         )
+
 
     model_name = os.getenv(
         "GEMINI_MODEL",
@@ -192,7 +205,10 @@ def build_agent():
         inspect_finding_evidence,
         calculate_finding_priority,
         compare_security_findings,
-          
+        investigate_graph_context,
+        compare_graph_contexts,
+        simulate_data_classification_change,
+        record_graph_investigation,
     ]
 
 
@@ -348,9 +364,14 @@ def main():
 
     print(f"\nUser Query: {query}")
 
-    agent = build_agent()
+    try:
+        agent = build_agent()
+    except RuntimeError as err:
+        print(f"\n[TraceShield] Cannot run AI agent: {err}")
+        sys.exit(1)
 
     print("\n[TraceShield] Investigating FalkorDB graph...\n")
+
 
     try:
         result = agent.invoke(

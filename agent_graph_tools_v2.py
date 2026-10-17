@@ -13,7 +13,10 @@ def investigate_graph_context(finding_id: str) -> str:
     evidence, graph-derived risk and a specific defensive next-action plan.
     Use for security investigations, prioritization, and choosing the next action.
     """
-    return json.dumps(investigate(finding_id), default=str)
+    try:
+        return json.dumps(investigate(finding_id), default=str)
+    except Exception as error:
+        return json.dumps({"error": str(error), "finding_id": finding_id})
 
 
 @tool
@@ -21,7 +24,10 @@ def compare_graph_contexts(finding_ids: list[str]) -> str:
     """Compare/rank 2-10 finding IDs using graph paths, supporting evidence,
     related findings, priorities and recommended defensive next actions.
     """
-    return json.dumps(rank_findings(finding_ids), default=str)
+    try:
+        return json.dumps(rank_findings(finding_ids), default=str)
+    except Exception as error:
+        return json.dumps({"error": str(error), "finding_ids": finding_ids})
 
 
 @tool
@@ -30,7 +36,10 @@ def simulate_data_classification_change(finding_id: str, classification: str) ->
     classification (public, internal or sensitive) changes risk scoring, without
     changing actual FalkorDB data. Use when asked why the graph matters.
     """
-    return json.dumps(what_if_classification(finding_id, classification), default=str)
+    try:
+        return json.dumps(what_if_classification(finding_id, classification), default=str)
+    except Exception as error:
+        return json.dumps({"error": str(error), "finding_id": finding_id, "classification": classification})
 
 
 @tool
@@ -39,4 +48,8 @@ def record_graph_investigation(finding_id: str) -> str:
     FalkorDB as Investigation and Action nodes. No remediation is executed.
     Call only when explicitly asked to record or save an investigation.
     """
-    return json.dumps(record_investigation(finding_id), default=str)
+    try:
+        return json.dumps(record_investigation(finding_id), default=str)
+    except Exception as error:
+        return json.dumps({"error": str(error), "finding_id": finding_id})
+
