@@ -5,4 +5,58 @@ services:
     ports:
       - "127.0.0.1:6379:6379"
       - "127.0.0.1:3000:3000"
+    volumes:
+      - falkordb_data:/data
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  demoshop:
+    build:
+      context: .
+      dockerfile: Dockerfile.demoshop
+    container_name: traceshield-demoshop
+    ports:
+      - "127.0.0.1:5001:5001"
+    environment:
+      - DEMOSHOP_PORT=5001
+      - DEMOSHOP_HOST=0.0.0.0
+    restart: unless-stopped
+
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: traceshield-backend
+    ports:
+      - "127.0.0.1:8000:8000"
+    environment:
+      - FALKORDB_HOST=falkordb
+      - FALKORDB_PORT=6379
+      - FALKORDB_GRAPH=traceshield
+      - RUNNING_IN_DOCKER=true
+      - GOOGLE_API_KEY=${GOOGLE_API_KEY:-}
+      - GEMINI_MODEL=${GEMINI_MODEL:-gemini-2.5-flash-lite}
+    depends_on:
+      falkordb:
+        condition: service_healthy
+      demoshop:
+        condition: service_started
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: traceshield-frontend
+    ports:
+      - "5173:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+volumes:
+  falkordb_data:

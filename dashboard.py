@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import html
 import json
+import os
 import subprocess
 import sys
 from datetime import datetime
@@ -184,7 +185,7 @@ with tab_overview:
     if fixtures:
         with st.expander(f"Show {len(fixtures)} seeded demonstration finding(s)"):
             st.dataframe(pd.DataFrame(fixtures), hide_index=True, use_container_width=True)
-            st.caption("F-001 and F-004 may share an endpoint, but F-004's passed test does not automatically resolve the distinct F-001 record.")
+            st.caption("F-001 and F-002 are canonical findings evaluated by live scanners; verification retests update their lifecycle state directly.")
 
 with tab_graph:
     if not findings:
@@ -216,7 +217,7 @@ with tab_reasoning:
     st.subheader("Graph-grounded correlation and what-if reasoning")
     st.caption("Related findings are discovered through shared FalkorDB topology. Correlation is not proof that the same underlying defect exists.")
     if findings:
-        choice = st.selectbox("Investigation finding", [f["ID"] for f in findings], index=next((i for i, x in enumerate(findings) if x["ID"] == "F-004"), 0), key="reasoning_finding")
+        choice = st.selectbox("Investigation finding", [f["ID"] for f in findings], index=next((i for i, x in enumerate(findings) if x["ID"] in ("F-001", "F-004")), 0), key="reasoning_finding")
         try:
             related = correlated_findings(choice)
             if related:
@@ -265,11 +266,11 @@ with tab_timeline:
                 st.json(test)
     else:
         st.info("No TestResult nodes found. Run `python -m scanners.bola_check` to create a test record.")
-    st.markdown("**Recommended follow-up:** Verify F-004 remains protected across additional orders and users; resolve F-003's missing CSP header and rescan.")
+    st.markdown("**Recommended follow-up:** Verify F-001 remains protected across additional orders and users; resolve F-002's missing CSP header and rescan.")
 
 with tab_agent:
     st.subheader("Ask the graph-powered security agent")
-    question = st.text_area("Investigation request", value="Compare F-003 and F-004 using current verification evidence. Recommend the next unresolved investigation, separating historical impact from current status.", height=110)
+    question = st.text_area("Investigation request", value="Compare F-001 and F-002 using current verification evidence. Recommend the next unresolved investigation, separating historical impact from current status.", height=110)
     if st.button("Run Gemini investigation", type="primary"):
         with st.spinner("Investigating graph and generating report..."):
             rc, output = run_command(["agent.py", question], timeout=120)
@@ -280,8 +281,9 @@ with tab_agent:
         st.code(output or "No output returned", language="text")
 
 with tab_scanner:
+    demo_port = os.getenv("DEMOSHOP_PORT", "5001")
     st.subheader("Authorized localhost-only scanning")
-    st.warning("These controls run local synthetic tests against `127.0.0.1:8000`. Start DemoShop in another terminal first.")
+    st.warning(f"These controls run local synthetic tests against DemoShop on port {demo_port}. Start DemoShop in another terminal first.")
     left, right = st.columns(2)
     with left:
         if st.button("Scan missing HTTP headers"):

@@ -1,0 +1,27 @@
+# Git
+.git
+.gitignore
+
+# Python caches
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Node.js
+frontend/node_modules/
+frontend/dist/
+frontend/.env.local
+
+# Virtual environments
+.venv/
+venv/
+ENV/
+
+# Agent and temporary files
+.agents/
+.claude/
+scratch/
