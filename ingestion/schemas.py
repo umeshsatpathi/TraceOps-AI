@@ -85,12 +85,17 @@ def validate_target_url(
     if not hostname:
         raise ValueError(f"Invalid target URL: missing hostname in '{url}'.")
 
-    if hostname not in [h.lower() for h in allowed_hosts]:
+    # Include hosts from ALLOWED_SCAN_HOSTS env var if provided
+    env_hosts = [h.strip().lower() for h in __import__("os").getenv("ALLOWED_SCAN_HOSTS", "").split(",") if h.strip()]
+    effective_hosts = [h.lower() for h in allowed_hosts] + env_hosts
+
+    if hostname not in effective_hosts:
         raise ValueError(
-            f"Unauthorized scan target '{hostname}'. Starter scanners are restricted to: {allowed_hosts}"
+            f"Unauthorized scan target '{hostname}'. Starter scanners are restricted to: {effective_hosts}"
         )
 
     return url.strip()
+
 
 
 def compute_finding_fingerprint(
