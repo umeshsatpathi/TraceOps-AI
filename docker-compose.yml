@@ -53,7 +53,9 @@ services:
       dockerfile: Dockerfile
     container_name: traceshield-frontend
     ports:
+      - "80:80"
       - "5173:80"
+
     depends_on:
       - backend
     restart: unless-stopped
