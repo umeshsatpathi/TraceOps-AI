@@ -12,7 +12,9 @@ Exposes REST contracts defined in docs/API_SPEC.md for:
 from __future__ import annotations
 
 import logging
+import os
 from uuid import uuid4
+
 
 from fastapi import FastAPI, Request, status
 from fastapi.exceptions import RequestValidationError
@@ -46,20 +48,33 @@ app = FastAPI(
 )
 
 # ---------------------------------------------------------------------------
-# CORS Configuration
+# CORS Configuration (Supports local dev + Vercel/Netlify cloud deployments)
 # ---------------------------------------------------------------------------
+_cors_origins_env = os.getenv("CORS_ORIGINS", "")
+_allowed_origins = [
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+]
+if _cors_origins_env:
+    for _o in _cors_origins_env.split(","):
+        _cleaned = _o.strip()
+        if _cleaned and _cleaned not in _allowed_origins:
+            _allowed_origins.append(_cleaned)
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:5173",
-        "http://127.0.0.1:5173",
-        "http://localhost:3000",
-        "http://127.0.0.1:3000",
-    ],
+    allow_origins=_allowed_origins,
+    allow_origin_regex=os.getenv(
+        "CORS_ORIGIN_REGEX",
+        r"https://.*(\.vercel\.app|\.netlify\.app)"
+    ),
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
 
 
 @app.on_event("startup")
