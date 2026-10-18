@@ -1,39 +1,43 @@
 
-# Secrets
+# Environment variables and secrets
 .env
 .env.*
 !.env.example
-*.pem
-*.key
-credentials.json
-secrets.json
 
-# Python
+# Python virtual environments
 .venv/
 venv/
+env/
+
+# Python cache
 __pycache__/
 *.py[cod]
 .pytest_cache/
 .mypy_cache/
 .ruff_cache/
 
-# Streamlit
-.streamlit/secrets.toml
-
-# IDE
+# Local IDE settings
 .vscode/
 .idea/
 
-# Operating system
+# Local AI development configuration
+.claude/
+
+# Streamlit secrets
+.streamlit/secrets.toml
+
+# Logs and temporary files
+*.log
+*.tmp
+*.bak
+
+# OS files
 .DS_Store
 Thumbs.db
 
-# Local data and logs
-*.log
-logs/
-*.db
-*.sqlite
-*.sqlite3
+# Backup code
+dashboard_before_autonomy.py
+graph_intelligence_before_autonomy.py
 
 # Temporary files
 tmp/
@@ -47,3 +51,8 @@ frontend/.env
 frontend/.env.local
 dist/
 *.log
+
+# Upgrade packages
+traceshield_autonomy_upgrade/
+traceshield_autonomy_upgrade.zip
+

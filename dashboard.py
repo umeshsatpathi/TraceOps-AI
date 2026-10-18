@@ -17,6 +17,11 @@ import streamlit as st
 from graph_db import get_graph
 from graph_tools import get_evidence, score_priority, trace_impact
 from graph_intelligence import correlated_findings, what_if_classification
+from autonomous_investigator import (
+    autonomous_investigate,
+    get_investigation_memory,
+    plan_investigation,
+)
 
 ROOT = Path(__file__).resolve().parent
 st.set_page_config(page_title="TraceShield AI | Security Operations", page_icon="🛡️", layout="wide")
@@ -162,8 +167,8 @@ m4.metric("Confirmed & unresolved", len(confirmed))
 
 st.info("Risk score describes **inherent graph impact**, not current exploitability. Remediated findings stay visible for regression monitoring, but are not automatically ranked above unresolved findings.")
 
-tab_overview, tab_graph, tab_reasoning, tab_timeline, tab_agent, tab_scanner = st.tabs([
-    "📊 Investigation Queue", "🕸️ Impact Graph", "🧠 Graph Reasoning", "🧪 Verification Timeline", "🤖 Gemini Agent", "🔎 Local Scanners"
+tab_overview, tab_graph, tab_reasoning, tab_timeline, tab_auto, tab_agent, tab_scanner = st.tabs([
+    "📊 Investigation Queue", "🕸️ Impact Graph", "🧠 Graph Reasoning", "🧪 Verification Timeline", "⚡ Autonomous Investigation", "🤖 Gemini Agent", "🔎 Local Scanners"
 ])
 
 with tab_overview:
@@ -268,12 +273,91 @@ with tab_timeline:
         st.info("No TestResult nodes found. Run `python -m scanners.bola_check` to create a test record.")
     st.markdown("**Recommended follow-up:** Verify F-001 remains protected across additional orders and users; resolve F-002's missing CSP header and rescan.")
 
+
+with tab_auto:
+    st.subheader("Graph-directed autonomous investigation")
+    st.caption("This is the 'agent acts on connected data' path: TraceShield reads FalkorDB, chooses a safe action, executes an allow-listed localhost verifier, and writes the decision and result back to FalkorDB.")
+    st.warning("Autonomous execution is intentionally constrained: only fixed read-only/synthetic tests against `127.0.0.1:8000` are allowed. No arbitrary URLs, shell commands, credentials, or automatic code remediation.")
+    if findings:
+        default_index = next((i for i, x in enumerate(findings) if x["ID"] == "F-004"), 0)
+        auto_choice = st.selectbox(
+            "Finding to investigate",
+            [f["ID"] for f in findings],
+            index=default_index,
+            key="autonomy_finding",
+        )
+        try:
+            plan = plan_investigation(auto_choice)
+            if "error" in plan:
+                st.error(plan["error"])
+            else:
+                context = plan["context"]
+                decision = plan["decision"]
+                op = plan.get("operational_context", {})
+                a, b, c, d = st.columns(4)
+                a.metric("Current status", context["finding"].get("status", "UNKNOWN"))
+                b.metric("Inherent risk", context.get("priority", {}).get("priority_score", 0))
+                c.metric("Action", decision.get("action_kind", "REVIEW_ONLY"))
+                d.metric("Owner", op.get("owner_team_name") or "Unassigned")
+
+                st.markdown("**Why the graph selected this action**")
+                st.write(decision.get("reason", "No decision reason available."))
+                if decision.get("sensitive_assets"):
+                    st.write("Sensitive assets considered:", ", ".join(decision["sensitive_assets"]))
+                if decision.get("related_findings"):
+                    st.write("Related findings considered:", ", ".join(x for x in decision["related_findings"] if x))
+                if op.get("project_name") or op.get("owner_team_name"):
+                    st.caption(f"Operational context: project={op.get('project_name') or 'unknown'} · owner={op.get('owner_team_name') or 'unassigned'}")
+
+                if st.button("⚡ Run graph-directed investigation", type="primary", key="run_autonomy"):
+                    with st.spinner("Reading graph → selecting allow-listed action → executing verifier → recording audit trail..."):
+                        result = autonomous_investigate(auto_choice, execute=True)
+                    st.session_state["last_autonomy_result"] = result
+
+                last = st.session_state.get("last_autonomy_result")
+                if last:
+                    post_id = last.get("post_investigation", {}).get("finding", {}).get("id")
+                    if post_id == auto_choice:
+                        execution = last.get("execution", {})
+                        if execution.get("status") == "SUCCEEDED":
+                            st.success(f"Action completed and recorded in FalkorDB · Investigation {last.get('investigation_id')}")
+                        elif execution.get("status") == "NO_ACTION":
+                            st.info(f"Investigation recorded without automated execution · {last.get('investigation_id')}")
+                        else:
+                            st.error(f"Action did not complete successfully · {last.get('investigation_id')}")
+                        st.markdown("**Executed action output**")
+                        st.code(execution.get("output") or "No command output", language="text")
+                        new_tests = execution.get("new_test_results") or []
+                        if new_tests:
+                            st.caption("New graph TestResult node(s): " + ", ".join(new_tests))
+
+                st.divider()
+                st.markdown("**Persistent investigation memory**")
+                memory = get_investigation_memory(auto_choice)
+                if memory:
+                    memory_rows = []
+                    for item in memory:
+                        memory_rows.append({
+                            "Investigation": item.get("investigation_id"),
+                            "Started": item.get("started_at"),
+                            "Decision": item.get("action_kind"),
+                            "Action status": item.get("action_status"),
+                            "Exit": item.get("exit_code"),
+                        })
+                    st.dataframe(pd.DataFrame(memory_rows), hide_index=True, use_container_width=True)
+                    with st.expander("Show latest decision rationale"):
+                        st.write(memory[0].get("reason") or "No stored rationale")
+                else:
+                    st.caption("No autonomous investigation history exists for this finding yet.")
+        except Exception as exc:
+            st.error(f"Autonomous investigation unavailable: {exc}")
+
 with tab_agent:
     st.subheader("Ask the graph-powered security agent")
     question = st.text_area("Investigation request", value="Compare F-001 and F-002 using current verification evidence. Recommend the next unresolved investigation, separating historical impact from current status.", height=110)
     if st.button("Run Gemini investigation", type="primary"):
         with st.spinner("Investigating graph and generating report..."):
-            rc, output = run_command(["agent.py", question], timeout=120)
+            rc, output = run_command(["agent_autonomous.py", question], timeout=120)
         if rc == 0:
             st.success("Investigation complete")
         else:
