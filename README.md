@@ -1,9 +1,9 @@
-# TraceOps AI (TraceShield)
+# TraceShield-AI
 ### Graph-Powered Autonomous Security Investigation & Verification
 
-**TraceOps AI** is an explainable, defensive security platform that turns isolated vulnerability findings into **connected, explainable, and actionable investigations**. It connects security findings, service dependencies, empirical evidence, deployment topology, and verification results in **FalkorDB** to help security engineers understand vulnerability blast radius, assess root-cause hypotheses, and execute authorized regression verifications with AI assistance.
+**TraceShield-AI** is an explainable, defensive security platform that turns isolated vulnerability findings into **connected, explainable, and actionable investigations**. It connects security findings, service dependencies, empirical evidence, deployment topology, and verification results in **FalkorDB** to help security engineers understand vulnerability blast radius, assess root-cause hypotheses, and execute authorized regression verifications with AI assistance.
 
-Instead of only reporting that an endpoint may be vulnerable, TraceOps AI traces **which service owns it, which database it reaches, which sensitive assets could be affected, which team is responsible, and what authorized verification should happen next**.
+Instead of only reporting that an endpoint may be vulnerable, TraceShield-AI traces **which service owns it, which database it reaches, which sensitive assets could be affected, which team is responsible, and what authorized verification should happen next**.
 
 > **Safety Boundary:** This is an authorized defensive demonstration platform using synthetic demo targets and allow-listed actions. It is **not** an unrestricted production scanner or auto-remediation platform.
 
@@ -22,13 +22,14 @@ Modern Application Security scanners (DAST, SAST, dependency checkers) generate 
 * Does that database hold public product catalogs or high-risk customer PII?
 * Has an engineer deployed a fix, and has anyone performed a regression check?
 
-TraceOps AI connects the dots using a **Security Knowledge Graph** in FalkorDB.
+TraceShield-AI connects the dots using a **Security Knowledge Graph** in FalkorDB.
 
 ---
 
 ## 🚀 Key Features
 
-| Capability | What TraceOps AI does |
+| Capability | What TraceShield-AI does |
+
 |---|---|
 | **Connected Security Knowledge Graph** | Links websites, endpoints, services, databases, sensitive assets, findings, evidence, projects, and owner teams in FalkorDB. |
 | **Attack Path & Blast Radius Analysis** | Traverses multi-hop relationships to uncover the end-to-end blast radius down to sensitive data stores. |
@@ -93,7 +94,7 @@ RETURN f.title AS Finding, e.path AS Endpoint, s.name AS Service,
 
 ## 🤖 Multi-Agent Collaborative Workflow
 
-TraceOps AI uses a two-agent collaborative workflow with a shared, persistent graph state:
+TraceShield-AI uses a two-agent collaborative workflow with a shared, persistent graph state:
 
 ```text
 ┌───────────────────────┐
@@ -150,7 +151,7 @@ TraceOps AI uses a two-agent collaborative workflow with a shared, persistent gr
 ## 📂 Project Structure
 
 ```text
-TraceOps-AI/
+TraceShield-AI/
 ├── api/                            # FastAPI REST service layer
 │   ├── main.py                     # API entrypoint and CORS middleware
 │   ├── routes/                     # Findings, Graph, Projects, Scans, Investigations

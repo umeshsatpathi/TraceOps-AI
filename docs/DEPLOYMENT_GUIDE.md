@@ -1,6 +1,6 @@
-# TraceOps AI — Cloud Deployment Guide (Render + Vercel + FalkorDB Cloud)
+# TraceShield-AI — Cloud Deployment Guide (Render + Vercel + FalkorDB Cloud)
 
-This guide walks you through deploying **TraceOps AI** using the split cloud architecture:
+This guide walks you through deploying **TraceShield-AI** using the split cloud architecture:
 * **Graph Database**: Managed [FalkorDB Cloud](https://app.falkordb.cloud/) (Free tier available)
 * **Backend API**: [Render](https://render.com/) (FastAPI REST service)
 * **Frontend Dashboard**: [Vercel](https://vercel.com/) (React + Vite + Cytoscape SPA)
@@ -38,7 +38,7 @@ This guide walks you through deploying **TraceOps AI** using the split cloud arc
 1. Log in to [Render Dashboard](https://dashboard.render.com/) and click **New +** > **Web Service**.
 2. Connect your GitHub repository: `https://github.com/umeshsatpathi/TraceOps-AI`.
 3. Configure the service settings:
-   * **Name**: `traceops-ai-backend`
+   * **Name**: `traceshield-ai-backend`
    * **Region**: Choose the region closest to your FalkorDB instance.
    * **Branch**: `main`
    * **Root Directory**: *(Leave blank - repo root)*
@@ -82,7 +82,7 @@ This guide walks you through deploying **TraceOps AI** using the split cloud arc
 | `VITE_API_URL` | `https://<your-backend>.onrender.com/api` |
 
 5. Click **Deploy**.
-6. Vercel will build the frontend and provide your live URL (e.g. `https://traceops-ai.vercel.app`).
+6. Vercel will build the frontend and provide your live URL (e.g. `https://traceshield-ai.vercel.app`).
    * *Note: The repository already includes `frontend/vercel.json` so client-side SPA routing (`/findings`, `/graph`, `/investigations`) works without 404 errors on page refresh.*
 
 ---
