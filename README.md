@@ -1,7 +1,7 @@
 # TraceOps AI (TraceShield)
 ### Graph-Powered Autonomous Security Investigation & Verification
 
-**TraceOps AI** (TraceShield) is an explainable, defensive security platform that turns isolated vulnerability findings into **connected, explainable, and actionable investigations**. It connects security findings, service dependencies, empirical evidence, deployment topology, and verification results in **FalkorDB** to help security engineers understand vulnerability blast radius, assess root-cause hypotheses, and execute authorized regression verifications with AI assistance.
+**TraceOps AI** is an explainable, defensive security platform that turns isolated vulnerability findings into **connected, explainable, and actionable investigations**. It connects security findings, service dependencies, empirical evidence, deployment topology, and verification results in **FalkorDB** to help security engineers understand vulnerability blast radius, assess root-cause hypotheses, and execute authorized regression verifications with AI assistance.
 
 Instead of only reporting that an endpoint may be vulnerable, TraceOps AI traces **which service owns it, which database it reaches, which sensitive assets could be affected, which team is responsible, and what authorized verification should happen next**.
 
@@ -9,19 +9,35 @@ Instead of only reporting that an endpoint may be vulnerable, TraceOps AI traces
 
 ---
 
-## ⚡ Key Features
+## ⚡ The Problem: Alert Fatigue in Modern AppSec
+
+Modern Application Security scanners (DAST, SAST, dependency checkers) generate dozens or hundreds of isolated alerts:
+* *"BOLA detected on `/api/orders/{id}`"*
+* *"Missing Content-Security-Policy on `/`"*
+* *"Outdated dependency in microservice A"*
+
+**The issue:** Vulnerabilities do not exist in isolation. Disconnected scanners don't show:
+* Which backend microservice owns the endpoint?
+* What database does it query?
+* Does that database hold public product catalogs or high-risk customer PII?
+* Has an engineer deployed a fix, and has anyone performed a regression check?
+
+TraceOps AI connects the dots using a **Security Knowledge Graph** in FalkorDB.
+
+---
+
+## 🚀 Key Features
 
 | Capability | What TraceOps AI does |
 |---|---|
 | **Connected Security Knowledge Graph** | Links websites, endpoints, services, databases, sensitive assets, findings, evidence, projects, and owner teams in FalkorDB. |
 | **Attack Path & Blast Radius Analysis** | Traverses multi-hop relationships to uncover the end-to-end blast radius down to sensitive data stores. |
-| **Interactive Cytoscape.js SOC Dashboard** | Modern React + Vite interface with an interactive graph explorer, finding lifecycle badges, and investigation console. |
-| **FastAPI Service Layer** | 12 REST endpoints with strict Pydantic schemas, error envelopes, and CORS support. |
+| **Interactive Cytoscape.js SOC Dashboard** | Modern React + Vite interface with an interactive graph explorer, 1-hop neighbor expansion, finding lifecycle badges, and investigation console. |
+| **FastAPI REST Service Layer** | REST endpoints with strict Pydantic schemas, RFC-compliant error envelopes, and CORS support. |
 | **Contextual Risk Scoring** | Deterministic inherent-impact heuristic combining severity, data sensitivity, and reachable dependencies. |
 | **Graph-Directed Autonomy & Action Policy** | Selects and executes approved, safe local verification checks based on graph context and strict safety policies. |
 | **Multi-Agent Collaboration** | Investigator agent prepares shared graph state; Verifier agent reads FalkorDB and executes approved checks. |
 | **Persistent Audit Trail** | Records investigations, decisions, actions, and regression test results directly in FalkorDB. |
-| **Containerized Deployment** | Production-ready multi-container `docker-compose` setup for FalkorDB, DemoShop, FastAPI, and Nginx/React frontend. |
 
 ---
 
@@ -60,6 +76,75 @@ flowchart LR
     ACT -->|"RECORDS"| TR["TestResult"]
 ```
 
+### The Connected Cypher Query in Action
+
+A single Cypher query traverses the full stack down to the data classification level:
+
+```cypher
+MATCH (f:Finding {id: 'F-001'})-[:AFFECTS]->(e:Endpoint)
+      -[:ROUTES_TO]->(s:Service)
+      -[:QUERIES]->(d:Database)
+      -[:STORES]->(a:DataAsset)
+RETURN f.title AS Finding, e.path AS Endpoint, s.name AS Service, 
+       d.name AS Database, a.name AS Asset, a.classification AS Sensitivity;
+```
+
+---
+
+## 🤖 Multi-Agent Collaborative Workflow
+
+TraceOps AI uses a two-agent collaborative workflow with a shared, persistent graph state:
+
+```text
+┌───────────────────────┐
+│  Investigator Agent   │
+│  (Google Gemini LLM)  │
+└───────────┬───────────┘
+            │ 1. Queries graph topology & correlates evidence
+            │ 2. Computes inherent blast radius
+            │ 3. Writes structured Investigation Handoff to FalkorDB
+            ▼
+┌───────────────────────┐
+│  FalkorDB Graph State │
+└───────────┬───────────┘
+            │ 4. Verifier reads handoff state from FalkorDB
+            ▼
+┌───────────────────────┐
+│    Verifier Agent     │
+│  (Safety Constrained) │
+└───────────┬───────────┘
+            │ 5. Executes allow-listed test against target
+            │ 6. Emits immutable TestResult node into graph
+            ▼
+┌───────────────────────┐
+│ Status: [REMEDIATED]  │
+└───────────────────────┘
+```
+
+### Safety Guardrails (`action_policy.py`)
+* Autonomous execution is strictly confined to read-only, allow-listed endpoints on approved local/demo targets.
+* Arbitrary terminal commands and unvalidated URLs are blocked by deterministic code validators before any request fires.
+* If Gemini is unavailable or quotas are exceeded, the platform seamlessly falls back to a deterministic Cypher-based reasoning loop without crashing.
+
+---
+
+## 🛡️ Demonstration Findings
+
+| Finding ID | Title | Vulnerability Type | Severity | Affected Endpoint | Sensitive Data Exposed |
+|---|---|---|:---:|---|:---:|
+| **`F-001`** | Broken Object Level Authorization (BOLA) | `BOLA` | High (4) | `/api/orders/{id}` | **Yes** (`customer-orders`) |
+| **`F-002`** | Missing Content Security Policy | `MISSING_CSP` | Low (2) | `/` & `/api/products` | No (Public Catalog) |
+| **`F-003`** | *(Legacy alias for F-002)* | `MISSING_CSP` | Low (2) | `/` | No |
+| **`F-004`** | *(Legacy alias for F-001)* | `BOLA` | High (4) | `/api/orders/{id}` | **Yes** |
+
+### Scenario Walkthrough: BOLA (`F-001`)
+1. **Detection & Ingestion:** The scanner verifies that Bob (User B) receives `HTTP 200` accessing Alice's order. Finding moves from `UNVERIFIED` to `CONFIRMED`.
+2. **Blast Radius Computation:** Graph traversal reveals `Orders Service` queries `customer-orders` (classified as **sensitive**). Risk heuristic is prioritized to **High (Severity 4 / 90 Inherent Impact)**.
+3. **Remediation & Regression Check:** Once the security patch is applied, the Verifier triggers the two-user check:
+   - Alice requests order $\rightarrow$ `HTTP 200` (Allowed)
+   - Bob requests Alice's order $\rightarrow$ `HTTP 403 Forbidden` (Blocked)
+4. **State Transition:** The platform writes an immutable `TestResult` node into FalkorDB and transitions finding status to **`REMEDIATED`**.
+
 ---
 
 ## 📂 Project Structure
@@ -67,7 +152,7 @@ flowchart LR
 ```text
 TraceOps-AI/
 ├── api/                            # FastAPI REST service layer
-│   ├── main.py                     # API entrypoint and middleware
+│   ├── main.py                     # API entrypoint and CORS middleware
 │   ├── routes/                     # Findings, Graph, Projects, Scans, Investigations
 │   ├── schemas.py                  # Pydantic request/response models
 │   └── services/                   # Graph, finding, scan, and AI investigation services
@@ -81,7 +166,6 @@ TraceOps-AI/
 ├── demoshop/                       # Local synthetic vulnerable target application
 ├── scanners/                       # Permitted local HTTP security checks (BOLA, Headers)
 ├── ingestion/                      # Canonical schemas, normalizer, and graph writers
-├── docs/                           # Architecture, API specs, Graph schema, and security docs
 ├── action_policy.py                # Allow-listed action-selection policy
 ├── agent.py                        # Graph analysis agent
 ├── agent_autonomous.py             # Gemini agent with autonomy tools
@@ -94,36 +178,15 @@ TraceOps-AI/
 ├── dashboard.py                    # Streamlit security dashboard
 ├── seed_graph.py                   # Seeds DemoShop synthetic topology
 ├── seed_operational_context.py     # Seeds projects and team ownership context
-├── docker-compose.yml              # Multi-container orchestration
-├── Dockerfile                      # FastAPI backend container
-├── Dockerfile.demoshop             # DemoShop target container
+├── docker-compose.yml              # Local multi-container orchestration
 └── requirements.txt                # Python dependencies
 ```
 
 ---
 
-## 🚀 Getting Started
+## 💻 Local Quickstart
 
-### Option 1: Full Docker Compose Stack (Recommended)
-
-Run the complete multi-service stack with persistent database, target app, backend API, and React frontend:
-
-```bash
-docker compose up -d
-```
-
-| Service | Access URL | Description |
-|---|---|---|
-| **React SOC Dashboard** | [http://localhost:5173](http://localhost:5173) | Interactive attack path visualization & SOC console |
-| **FastAPI REST API** | [http://localhost:8000/docs](http://localhost:8000/docs) | OpenAPI Swagger documentation |
-| **DemoShop Target** | [http://localhost:5001](http://localhost:5001) | Synthetic target application |
-| **FalkorDB** | `localhost:6379` | High-performance graph database |
-
----
-
-### Option 2: Local Python Development
-
-#### 1. Setup Environment
+### 1. Environment Setup
 ```bash
 python -m venv .venv
 # Windows:
@@ -135,7 +198,7 @@ pip install -r requirements.txt
 cp .env.example .env
 ```
 
-Configure your `.env`:
+Configure `.env`:
 ```dotenv
 FALKORDB_HOST=localhost
 FALKORDB_PORT=6379
@@ -144,90 +207,50 @@ GOOGLE_API_KEY=YOUR_GEMINI_API_KEY
 GEMINI_MODEL=gemini-2.5-flash-lite
 ```
 
-#### 2. Start FalkorDB & Seed Data
+### 2. Start FalkorDB & Seed Graph
 ```bash
 docker compose up -d falkordb
 python seed_graph.py
 python seed_operational_context.py
 ```
 
-#### 3. Run DemoShop
+### 3. Run DemoShop
 ```bash
 python demoshop/app.py --secure --port 5001
 ```
 
-#### 4. Run Backends & Dashboards
+### 4. Launch Services
 * **FastAPI Backend**:
   ```bash
   uvicorn api.main:app --reload --port 8000
   ```
-* **React Dashboard** (in `frontend/` directory):
+* **React SOC Dashboard**:
   ```bash
   cd frontend && npm install && npm run dev
   ```
-* **Streamlit Dashboard**:
+* **Streamlit UI**:
   ```bash
   streamlit run dashboard.py
   ```
 
 ---
 
-## 🤖 Autonomous Investigation & AI Agents
-
-### 1. Deterministic Autonomous Verification (No LLM Required)
-The deterministic loop queries FalkorDB, evaluates the graph-informed safety policy, executes the approved check, and commits audit records:
+## 🧪 Testing & Validation
 
 ```bash
-# Preview action plan
-python autonomous_investigator.py plan F-001
-
-# Execute approved regression verification
-python autonomous_investigator.py run F-001
-
-# Review audit history from FalkorDB
-python autonomous_investigator.py history F-001
-```
-
-### 2. Single Autonomous Gemini Agent
-```bash
-python agent_autonomous.py "Investigate F-001 using FalkorDB, execute the approved regression verification, and explain the result."
-```
-
-### 3. Multi-Agent Collaborative Workflow
-```bash
-python multi_agent_workflow.py F-001
-```
-* **Investigator Agent:** Gathers connected graph context, assesses inherent risk, and records an investigation handoff in FalkorDB.
-* **Verifier Agent:** Reads the shared handoff from FalkorDB, requests an authorized test run, executes the check, and records the `TestResult`.
-
----
-
-## 🛡️ Demonstration Findings
-
-| Finding ID | Title | Vulnerability Type | Severity | Affected Endpoint | Sensitive Data Exposed |
-|---|---|---|:---:|---|:---:|
-| **`F-001`** | Broken Object Level Authorization (BOLA) | `BOLA` | High (4) | `/api/orders/{id}` | **Yes** (`customer-orders`) |
-| **`F-002`** | Missing Content Security Policy | `MISSING_CSP` | Low (2) | `/` & `/api/products` | No (Public Catalog) |
-| **`F-003`** | *(Legacy alias for F-002)* | `MISSING_CSP` | Low (2) | `/` | No |
-| **`F-004`** | *(Legacy alias for F-001)* | `BOLA` | High (4) | `/api/orders/{id}` | **Yes** |
-
----
-
-## 🧪 Testing & Quality Assurance
-
-Run the automated test suite covering Pydantic schemas, normalizers, scanners, API endpoints, and investigation agents:
-
-```bash
-# Run full pytest suite (82+ unit & integration tests)
+# Run pytest suite (87 unit, schema, and API tests)
 pytest -v
 
 # Run Python unittest suite
 python -m unittest discover -s tests -p "test_*.py"
+
+# Preview autonomous action plan without LLM
+python autonomous_investigator.py plan F-001
 ```
 
 ---
 
-## 🔒 Safety & Authorization Boundaries
+## 🔒 Security & Scope Boundaries
 
 1. **Local & Permitted Scopes Only:** Scanners strictly validate target URLs against authorized hosts (`localhost`, `127.0.0.1`, `demoshop`).
 2. **Read-Only / Regression Testing:** Automated verification only performs authorized regression checks against synthetic accounts.
