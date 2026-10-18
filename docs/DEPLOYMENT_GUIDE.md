@@ -36,7 +36,7 @@ This guide walks you through deploying **TraceShield-AI** using the split cloud 
 ## Step 2: Deploy the FastAPI Backend to Render
 
 1. Log in to [Render Dashboard](https://dashboard.render.com/) and click **New +** > **Web Service**.
-2. Connect your GitHub repository: `https://github.com/umeshsatpathi/TraceOps-AI`.
+2. Connect your GitHub repository: `https://github.com/umeshsatpathi/TraceShield-AI`.
 3. Configure the service settings:
    * **Name**: `traceshield-ai-backend`
    * **Region**: Choose the region closest to your FalkorDB instance.
@@ -69,7 +69,7 @@ This guide walks you through deploying **TraceShield-AI** using the split cloud 
 ## Step 3: Deploy the React Frontend to Vercel
 
 1. Log in to [Vercel](https://vercel.com/) and click **Add New...** > **Project**.
-2. Select your repository `umeshsatpathi/TraceOps-AI`.
+2. Select your repository `umeshsatpathi/TraceShield-AI`.
 3. Configure Project Settings:
    * **Framework Preset**: `Vite` (automatically detected)
    * **Root Directory**: Click *Edit* and select **`frontend`**
